@@ -1,0 +1,23 @@
+node_modules
+.env
+.env.*
+dist
+build
+*.log
+backend/.gradle
+backend/build
+frontend/node_modules
+frontend/dist
+frontend-react/dist
+*.DS_Store
+docs_archive/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+frontend-react/test-results/
+frontend-react/playwright-report/
+frontend-react/coverage/
