@@ -2,7 +2,7 @@
 
 A comprehensive, full-stack cryptocurrency and stock market dashboard with real-time data, portfolio tracking, AI-powered chat, and advanced analytics.
 
-**GitHub**: [ankit7610/Cryptocurrency](https://github.com/ankit7610/Cryptocurrency)
+
 
 ---
 
