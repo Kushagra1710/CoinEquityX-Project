@@ -337,11 +337,8 @@ function serveStatic(req, res) {
 
   fs.stat(filePath, (err, stats) => {
     if (err) {
-      if (safePath === 'index.html' || req.url === '/') {
-        return send404(res);
-      }
       const indexPath = path.join(publicDir, 'index.html');
-      return fs.createReadStream(indexPath).pipe(res);
+      return serveFile(indexPath, res);
     }
 
     if (stats.isDirectory()) {
