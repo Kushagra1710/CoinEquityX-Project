@@ -6,7 +6,7 @@ const { MongoClient, ServerApiVersion } = require('mongodb');
 const CMC_BASE_URL = 'https://pro-api.coinmarketcap.com';
 const FX_BASE_URL = 'https://api.freecurrencyapi.com/v1';
 const NEWS_BASE_URL = 'https://api.marketaux.com/v1';
-const publicDir = path.join(__dirname, '..', 'frontend');
+const publicDir = path.join(__dirname, '..', 'frontend-react');
 
 const mimeTypes = {
   '.html': 'text/html',
