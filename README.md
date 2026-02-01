@@ -1,4 +1,4 @@
-# Crypto Pulse 🚀
+# CoinEquityX 🚀
 
 A comprehensive, full-stack cryptocurrency and stock market dashboard with real-time data, portfolio tracking, AI-powered chat, and advanced analytics.
 
