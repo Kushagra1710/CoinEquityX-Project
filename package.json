@@ -8,7 +8,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "format": "prettier --check .",
-    "test": "node --test backend/__tests__",
+    "test": "node --test backend/__tests__/*.test.js",
     "test:backend": "node --test backend/__tests__/unit.test.js",
     "test:backend:integration": "node --test backend/__tests__/integration.test.js",
     "test:e2e": "cd frontend-react && npx playwright test",

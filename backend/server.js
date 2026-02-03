@@ -164,6 +164,7 @@ function createAppServer(options = {}) {
         }
         case '/api/quote': {
           if (!CMC_API_KEY) return sendJson(res, 500, { error: 'CMC_API_KEY missing on server' });
+          const id = requestUrl.searchParams.get('id');
           if (!id) return sendJson(res, 400, { error: 'Missing required id parameter' });
           const cmcUrl = `${CMC_BASE_URL}/v1/cryptocurrency/quotes/latest?id=${encodeURIComponent(id)}`;
           // Cache crypto quotes for only 1 minute
