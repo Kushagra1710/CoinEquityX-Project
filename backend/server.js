@@ -36,7 +36,7 @@ function createAppServer(options = {}) {
   const rateLimit = Number(env.RATE_LIMIT || 1000);
   const rateWindowMs = Number(env.RATE_LIMIT_WINDOW_MS || 24 * 60 * 60 * 1000); // 24 hours
   const allowRequest = createRateLimiter({ limit: rateLimit, windowMs: rateWindowMs });
-  
+
   // In-memory cache for API responses
   const apiCache = new Map();
   const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours for stock data
@@ -164,10 +164,16 @@ function createAppServer(options = {}) {
         }
         case '/api/quote': {
           if (!CMC_API_KEY) return sendJson(res, 500, { error: 'CMC_API_KEY missing on server' });
-          const id = requestUrl.searchParams.get('id');
           if (!id) return sendJson(res, 400, { error: 'Missing required id parameter' });
           const cmcUrl = `${CMC_BASE_URL}/v1/cryptocurrency/quotes/latest?id=${encodeURIComponent(id)}`;
-          return proxy(res, cmcUrl);
+          // Cache crypto quotes for only 1 minute
+          const cacheKey = `quote_${id}`;
+          const cached = getCached(cacheKey, 60000);
+          if (cached) return sendJson(res, 200, cached);
+
+          const data = await fetchCoinMarketCap(cmcUrl);
+          if (data.statusCode === 200) setCache(cacheKey, data.body);
+          return sendJson(res, data.statusCode, data.body);
         }
         case '/api/categories': {
           if (!CMC_API_KEY) return sendJson(res, 500, { error: 'CMC_API_KEY missing on server' });
@@ -207,7 +213,7 @@ function createAppServer(options = {}) {
           const cacheKey = `stock_symbols_${exchange}`;
           const cached = getCached(cacheKey);
           if (cached) return sendJson(res, 200, cached);
-          
+
           const finnhubUrl = `${FINNHUB_BASE_URL}/stock/symbol?exchange=${exchange}&token=${FINNHUB_API_KEY}`;
           const data = await fetchPassthrough(finnhubUrl, {}, fetchImpl);
           if (data.statusCode === 200) setCache(cacheKey, data.body);
@@ -220,7 +226,7 @@ function createAppServer(options = {}) {
           const cacheKey = `stock_search_${query}`;
           const cached = getCached(cacheKey);
           if (cached) return sendJson(res, 200, cached);
-          
+
           const finnhubUrl = `${FINNHUB_BASE_URL}/search?q=${encodeURIComponent(query)}&token=${FINNHUB_API_KEY}`;
           const data = await fetchPassthrough(finnhubUrl, {}, fetchImpl);
           const result = data.body.result || [];
@@ -232,7 +238,7 @@ function createAppServer(options = {}) {
           const cacheKey = 'stock_news_general';
           const cached = getCached(cacheKey);
           if (cached) return sendJson(res, 200, cached);
-          
+
           const finnhubUrl = `${FINNHUB_BASE_URL}/news?category=general&token=${FINNHUB_API_KEY}`;
           const data = await fetchPassthrough(finnhubUrl, {}, fetchImpl);
           if (data.statusCode === 200) setCache(cacheKey, data.body);
@@ -243,9 +249,10 @@ function createAppServer(options = {}) {
           const symbol = requestUrl.searchParams.get('symbol');
           if (!symbol) return sendJson(res, 400, { error: 'Missing symbol parameter' });
           const cacheKey = `stock_quote_${symbol}`;
-          const cached = getCached(cacheKey);
+          // Cache stock quotes for only 1 minute instead of 24h
+          const cached = getCached(cacheKey, 60000);
           if (cached) return sendJson(res, 200, cached);
-          
+
           const finnhubUrl = `${FINNHUB_BASE_URL}/quote?symbol=${encodeURIComponent(symbol)}&token=${FINNHUB_API_KEY}`;
           const data = await fetchPassthrough(finnhubUrl, {}, fetchImpl);
           if (data.statusCode === 200) setCache(cacheKey, data.body);
@@ -258,7 +265,7 @@ function createAppServer(options = {}) {
           const cacheKey = `stock_metric_${symbol}`;
           const cached = getCached(cacheKey);
           if (cached) return sendJson(res, 200, cached);
-          
+
           const finnhubUrl = `${FINNHUB_BASE_URL}/stock/metric?symbol=${encodeURIComponent(symbol)}&metric=all&token=${FINNHUB_API_KEY}`;
           const data = await fetchPassthrough(finnhubUrl, {}, fetchImpl);
           if (data.statusCode === 200) setCache(cacheKey, data.body);
@@ -282,6 +289,24 @@ function createAppServer(options = {}) {
           }
           return sendJson(res, 405, { error: 'Method Not Allowed' });
         }
+        case '/api/virtual-trading': {
+          if (!mongoConfig.uri) {
+            return sendJson(res, 501, { error: 'Database not configured (MONGODB_URI missing)' });
+          }
+          const userId = req.headers['x-user-id'] || 'default';
+          if (req.method === 'GET') {
+            const data = await readVirtualPortfolio(mongoConfig, userId);
+            return sendJson(res, 200, data);
+          }
+          if (req.method === 'PUT') {
+            const body = await readJsonBody(req);
+            // Basic validation
+            if (typeof body.cashBalance !== 'number') return sendJson(res, 400, { error: 'Invalid cashBalance' });
+            const saved = await writeVirtualPortfolio(mongoConfig, body, userId);
+            return sendJson(res, 200, saved);
+          }
+          return sendJson(res, 405, { error: 'Method Not Allowed' });
+        }
         default:
           return sendJson(res, 404, { error: 'Not Found' });
       }
@@ -291,10 +316,10 @@ function createAppServer(options = {}) {
     }
   }
 
-  function getCached(key) {
+  function getCached(key, ttlMs = CACHE_TTL_MS) {
     const cached = apiCache.get(key);
     if (!cached) return null;
-    if (Date.now() - cached.timestamp > CACHE_TTL_MS) {
+    if (Date.now() - cached.timestamp > ttlMs) {
       apiCache.delete(key);
       return null;
     }
@@ -516,6 +541,39 @@ async function writeStockPortfolio(config, entries, userId) {
     { upsert: true }
   );
   return entries;
+}
+
+async function readVirtualPortfolio(config, userId) {
+  const client = await getMongoClient(config.uri);
+  const db = client.db(config.db);
+  const collection = db.collection('virtual_trading');
+  const doc = await collection.findOne({ _id: userId });
+  // Default state if new user
+  return doc || {
+    cashBalance: 1000000,
+    holdings: [],
+    transactions: [],
+    updatedAt: new Date().toISOString()
+  };
+}
+
+async function writeVirtualPortfolio(config, data, userId) {
+  const client = await getMongoClient(config.uri);
+  const db = client.db(config.db);
+  const collection = db.collection('virtual_trading');
+  await collection.updateOne(
+    { _id: userId },
+    {
+      $set: {
+        cashBalance: data.cashBalance,
+        holdings: data.holdings,
+        transactions: data.transactions,
+        updatedAt: new Date()
+      }
+    },
+    { upsert: true }
+  );
+  return data;
 }
 
 async function closeMongoClient() {

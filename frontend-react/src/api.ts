@@ -6,7 +6,7 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 type CacheEntry<T> = { data: T; timestamp: number };
 const memoryCache = new Map<string, CacheEntry<any>>();
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+export const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 const withBase = (path: string) => `${API_BASE}${path}`;
 
 async function fetchJson<T>(
@@ -75,7 +75,7 @@ export async function savePortfolio(entries: PortfolioEntry[], userId?: string):
     body: JSON.stringify(entries)
   });
   const data = await res.json();
-  
+
   // Update cache with new data
   if (res.ok) {
     const cacheKey = `${API_BASE}/api/portfolio?user=${userId || 'anon'}`;
@@ -83,7 +83,7 @@ export async function savePortfolio(entries: PortfolioEntry[], userId?: string):
     memoryCache.set(cacheKey, { data, timestamp: now });
     void setCached(cacheKey, data);
   }
-  
+
   return data;
 }
 
@@ -107,4 +107,22 @@ export async function sendChatMessage(message: string): Promise<string> {
     throw new Error(errorMessage);
   }
   return typeof data?.text === 'string' ? data.text : '';
+}
+
+export async function getVirtualPortfolio(userId?: string): Promise<any> {
+  const headers: HeadersInit = {};
+  if (userId) headers['X-User-ID'] = userId;
+  // No caching for virtual trading to ensure real-time balance checks
+  return fetchJson(withBase('/api/virtual-trading'), 0, false, headers);
+}
+
+export async function saveVirtualPortfolio(data: any, userId?: string): Promise<any> {
+  const headers: HeadersInit = { 'Content-Type': 'application/json' };
+  if (userId) headers['X-User-ID'] = userId;
+  const res = await fetch(withBase('/api/virtual-trading'), {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(data)
+  });
+  return await res.json();
 }

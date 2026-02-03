@@ -12,15 +12,18 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const CategoriesPage = lazy(() => import('./pages/CategoriesPage'));
 const PortfolioPage = lazy(() => import('./pages/PortfolioPage'));
 const NewsPage = lazy(() => import('./pages/NewsPage'));
+const VirtualTradingPage = lazy(() => import('./pages/VirtualTradingPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const StockDashboard = lazy(() => import('./pages/StockDashboard'));
 const StockNewsPage = lazy(() => import('./pages/StockNewsPage'));
 const StockCategoriesPage = lazy(() => import('./pages/StockCategoriesPage'));
 const StockPortfolioPage = lazy(() => import('./pages/StockPortfolioPage'));
+
 import { useFx } from './hooks/useFx';
 import { PageTransition } from './components/PageTransition';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ChatWidget } from './components/ChatWidget';
+import { VirtualTradingProvider } from './context/VirtualTradingContext';
 
 const queryClient = new QueryClient();
 
@@ -63,12 +66,12 @@ function Shell() {
             light: mode === 'dark' ? '#6DD0F5' : '#6DD0F5',
           },
           background: {
-            default: mode === 'dark' ? '#0a0f1a' : '#f5f7fa',
-            paper: mode === 'dark' ? '#131a2b' : '#ffffff',
+            default: mode === 'dark' ? '#0a0f1a' : '#F8FAFC',
+            paper: mode === 'dark' ? '#131a2b' : '#FFFFFF',
           },
           success: {
-            main: mode === 'dark' ? '#00D09C' : '#00B386',
-            light: mode === 'dark' ? '#1DE4B0' : '#00D09C',
+            main: mode === 'dark' ? '#00D09C' : '#059669',
+            light: mode === 'dark' ? '#1DE4B0' : '#10B981',
           },
           error: {
             main: mode === 'dark' ? '#EB5B3C' : '#EB5B3C',
@@ -78,11 +81,11 @@ function Shell() {
             main: mode === 'dark' ? '#FF9800' : '#FF9800',
           },
           info: {
-            main: mode === 'dark' ? '#44C1F0' : '#44C1F0',
+            main: mode === 'dark' ? '#44C1F0' : '#0284C7',
           },
           text: {
-            primary: mode === 'dark' ? '#ECEFF1' : '#44475B',
-            secondary: mode === 'dark' ? '#9E9E9E' : '#7C7E8C',
+            primary: mode === 'dark' ? '#ECEFF1' : '#1E293B',
+            secondary: mode === 'dark' ? '#9E9E9E' : '#64748B',
           },
         },
         typography: {
@@ -118,17 +121,17 @@ function Shell() {
           MuiCard: {
             styleOverrides: {
               root: {
-                boxShadow: mode === 'dark' 
+                boxShadow: mode === 'dark'
                   ? '0 2px 8px rgba(0, 0, 0, 0.3)'
-                  : '0 1px 2px rgba(0, 0, 0, 0.05)',
-                border: mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #EBEBEB',
+                  : '0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06)',
+                border: mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #E2E8F0',
                 borderRadius: 8,
                 transition: 'all 0.2s ease',
                 '&:hover': {
                   transform: 'translateY(-1px)',
                   boxShadow: mode === 'dark'
                     ? '0 4px 12px rgba(0, 0, 0, 0.4)'
-                    : '0 2px 4px rgba(0, 0, 0, 0.08)',
+                    : '0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06)',
                 },
               },
             },
@@ -251,10 +254,10 @@ function Shell() {
             >
               ₿
             </Box>
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                fontWeight: 500, 
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 500,
                 color: mode === 'dark' ? '#ECEFF1' : '#44475B',
                 fontSize: '1.1rem',
                 letterSpacing: '-0.01em',
@@ -313,7 +316,7 @@ function Shell() {
               aria-label="Toggle theme"
               sx={{
                 color: mode === 'dark' ? '#9E9E9E' : '#7C7E8C',
-                '&:hover': { 
+                '&:hover': {
                   bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F5F5F5',
                 },
               }}
@@ -322,10 +325,10 @@ function Shell() {
             </IconButton>
             <Stack direction="row" spacing={1} alignItems="center">
               <IconButton
-                onClick={() => setTab(4)}
+                onClick={() => setTab(5)}
                 size="small"
                 sx={{
-                  '&:hover': { 
+                  '&:hover': {
                     bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F5F5F5',
                   },
                 }}
@@ -354,7 +357,7 @@ function Shell() {
               size="small"
               sx={{
                 color: '#EB5B3C',
-                '&:hover': { 
+                '&:hover': {
                   bgcolor: 'rgba(235, 91, 60, 0.08)',
                 },
               }}
@@ -366,9 +369,9 @@ function Shell() {
         </Toolbar>
         <Box sx={{ borderBottom: 1, borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#EBEBEB' }}>
           <Container maxWidth="xl">
-            <Tabs 
-              value={tab > 3 ? false : tab}
-              onChange={(_, v) => setTab(v)} 
+            <Tabs
+              value={tab > 4 ? false : tab}
+              onChange={(_, v) => setTab(v)}
               textColor="inherit"
               variant="fullWidth"
               TabIndicatorProps={{
@@ -402,6 +405,7 @@ function Shell() {
               <Tab label="Categories" />
               <Tab label="Portfolio" />
               <Tab label="News" />
+              <Tab label="Virtual Trading" />
             </Tabs>
           </Container>
         </Box>
@@ -415,9 +419,9 @@ function Shell() {
           {tab === 0 && (
             <PageTransition>
               {marketMode === 'crypto' ? (
-                <Dashboard 
-                  listings={Array.isArray(listings.data?.data) ? listings.data.data : []} 
-                  isLoading={listings.isLoading} 
+                <Dashboard
+                  listings={Array.isArray(listings.data?.data) ? listings.data.data : []}
+                  isLoading={listings.isLoading}
                 />
               ) : (
                 <StockDashboard />
@@ -458,6 +462,11 @@ function Shell() {
           )}
           {tab === 4 && (
             <PageTransition>
+              <VirtualTradingPage />
+            </PageTransition>
+          )}
+          {tab === 5 && (
+            <PageTransition>
               <ProfilePage />
             </PageTransition>
           )}
@@ -465,7 +474,7 @@ function Shell() {
       </Container>
 
       {tab === 0 && <ChatWidget />}
-      
+
       <Box
         component="footer"
         sx={{
@@ -528,7 +537,9 @@ export default function App() {
       <AuthProvider>
         <MarketModeProvider>
           <PortfolioProvider>
-            <Shell />
+            <VirtualTradingProvider>
+              <Shell />
+            </VirtualTradingProvider>
           </PortfolioProvider>
         </MarketModeProvider>
       </AuthProvider>
